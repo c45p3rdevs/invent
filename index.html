@@ -12,22 +12,66 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- QRCode (para etiquetas) -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.5/build/qrcode.min.js"></script>
-  <!-- Partículas (tsparticles) -->
-  <script src="https://cdn.jsdelivr.net/npm/tsparticles@3/tsparticles.bundle.min.js"></script>
 
   <script>
     tailwind.config = {
       theme: {
-        extend: { colors: { indigoKer: '#2a337e' } }
+        extend: {
+          colors: {
+            brand:  '#0085ad',
+            brand2: '#74d2e7',
+            brandInk: '#0b3946'
+          }
+        }
       },
       daisyui: { themes: ["light","corporate","emerald","dim","dracula","lofi"] }
     }
   </script>
 
   <style>
+    :root{
+      --brand:  #0085ad;
+      --brand2: #74d2e7;
+      --brand-ink: #0b3946;
+    }
+
+    /* ===== Fondo institucional elegante ===== */
+    body{
+      min-height: 100dvh;
+      background:
+        radial-gradient(1200px 600px at -10% -20%, color-mix(in srgb, var(--brand) 12%, transparent) 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% -10%, color-mix(in srgb, var(--brand2) 24%, transparent) 0%, transparent 65%),
+        linear-gradient(180deg, #f2fbfe 0%, #eef7fb 100%);
+    }
+    .nav-accent{ position:relative; }
+    .nav-accent::after{
+      content:""; position:absolute; inset:auto 0 -1px 0; height:4px;
+      background: linear-gradient(90deg, var(--brand), var(--brand2));
+    }
+
+    /* ===== Botones y acentos de marca ===== */
+    .btn-primary{
+      background: linear-gradient(135deg, var(--brand) 0%, var(--brand2) 100%) !important;
+      border-color: color-mix(in srgb, var(--brand) 50%, black 10%) !important;
+      color: white !important;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:.375rem;
+      padding:.2rem .5rem; border-radius:9999px;
+      background: color-mix(in srgb, var(--brand2) 25%, white 80%);
+      border:1px solid color-mix(in srgb, var(--brand2) 35%, white 30%);
+      color: var(--brand-ink); font-weight:600; font-size:.75rem;
+    }
+    .brand-card{
+      border:1px solid color-mix(in srgb, var(--brand) 12%, #0000);
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 10px 28px rgba(11,57,70, .06);
+    }
+
     /* ===== Imprimir etiquetas ===== */
     @media print {
-      body { background: #fff !important; }
+      body { background:#fff !important; }
       #app { display:none !important; }
       #printArea { display:block !important; }
     }
@@ -35,54 +79,86 @@
     .labels-grid { display:grid; gap:6mm; grid-template-columns: repeat(3, 1fr); }
     .label {
       border:1px dashed #cbd5e1; border-radius:8px; padding:6mm;
-      display:flex; gap:6mm; align-items:center; min-height:38mm;
+      display:flex; gap:6mm; align-items:center; min-height:38mm; background:#fff;
     }
     .label .logo { width:22mm; height:auto; object-fit:contain; }
     .label .qr   { width:26mm; height:26mm; }
-    .label .meta { font-size:11px; line-height:1.2; }
-    .label .meta .title{ font-weight:700; font-size:12px; }
-    .label .meta .muted{ opacity:.7; }
-
-    /* ===== Fondo partículas tenue ===== */
-    #particles { position:fixed; inset:0; z-index:0; opacity:.15; pointer-events:none; }
-    #app { position: relative; z-index: 1; }
+    .label .meta { font-size:11px; line-height:1.2; color:#0b3946; }
+    .label .meta .title{ font-weight:800; font-size:12px; color:#0b3946; }
+    .label .meta .muted{ opacity:.75; }
 
     /* ===== Cards móviles ===== */
-    .m-card{ background:oklch(var(--b1)); border:1px solid oklch(var(--b3)/.5); border-radius:1rem; padding:0.75rem; box-shadow:0 10px 24px rgba(2,6,23,.06)}
-    .m-thumb{ width:3.5rem; height:3.5rem; border-radius:0.75rem; object-fit:cover; background:oklch(var(--b2)); border:1px solid oklch(var(--b3))}
-    .m-title{ font-weight:700; line-height:1.1 }
-    .m-sub{ font-size:.75rem; opacity:.7 }
-    .m-row{ display:grid; grid-template-columns: 1fr 1fr; gap:.5rem; margin-top:.5rem }
+    .m-card{ background:#fff; border:1px solid rgba(2,6,23,.06); border-radius:1rem; padding:0.85rem; box-shadow:0 10px 24px rgba(2,6,23,.06)}
+    .m-thumb{ width:3.25rem; height:3.25rem; border-radius:0.75rem; object-fit:cover; background:#eef7fb; border:1px solid rgba(2,6,23,.06)}
+    .m-title{ font-weight:800; line-height:1.1; color:var(--brand-ink) }
+    .m-sub{ font-size:.78rem; opacity:.75 }
+    .m-row{ display:grid; grid-template-columns: 1fr 1fr; gap:.5rem; margin-top:.55rem }
     .m-k{ font-size:.65rem; text-transform:uppercase; opacity:.6 }
-    .m-v{ font-size:.875rem }
+    .m-v{ font-size:.9rem }
+
+    /* ===== Toasts UI (gradient + barra de progreso) ===== */
+    .toast-stack{ position:fixed; right:1rem; bottom:1rem; display:flex; flex-direction:column; gap:.5rem; z-index:9999; }
+    .tst{
+      display:flex; gap:.75rem; align-items:center; padding:.75rem .875rem; min-width: 280px; max-width: 420px;
+      border-radius:14px; color:#062c36; background:#ffffff; border:1px solid rgba(2,6,23,.06);
+      box-shadow:0 12px 28px rgba(0,0,0,.08);
+      position:relative; overflow:hidden;
+    }
+    .tst::before{
+      content:""; position:absolute; left:0; top:0; bottom:0; width:6px; border-top-left-radius:14px; border-bottom-left-radius:14px;
+      background: linear-gradient(180deg, var(--brand), var(--brand2));
+    }
+    .tst .ico{
+      width:28px; height:28px; border-radius:8px;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 35%, #fff), color-mix(in srgb, var(--brand2) 35%, #fff));
+      display:grid; place-items:center; color:white;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 60%, #000 10%);
+      flex:0 0 auto;
+    }
+    .tst .msg{ font-weight:700; }
+    .tst .sub{ font-size:.8rem; opacity:.7 }
+    .tst .bar{
+      position:absolute; left:6px; right:6px; bottom:6px; height:4px; border-radius:999px; background:#e9f6fa; overflow:hidden;
+    }
+    .tst .bar span{
+      display:block; height:100%;
+      background: linear-gradient(90deg, var(--brand) 0%, var(--brand2) 100%);
+      width:0%;
+      animation: barRun 2.5s linear forwards;
+    }
+    @keyframes barRun { to { width:100%; } }
+
+    /* ===== Tabla (desktop) ===== */
+    .table thead th{
+      color: var(--brand-ink);
+      font-weight:800;
+      border-bottom: 2px solid color-mix(in srgb, var(--brand) 20%, #0000);
+    }
   </style>
 </head>
 
-<body class="bg-base-200 min-h-dvh">
-  <!-- Fondo partículas -->
-  <div id="particles"></div>
-
+<body>
   <!-- ====== APP ====== -->
-  <div id="app">
+  <div id="app" class="nav-accent">
     <!-- Navbar -->
-    <header class="navbar bg-base-100 shadow-sm sticky top-0 z-30">
+    <header class="navbar bg-base-100/90 backdrop-blur-sm shadow-sm sticky top-0 z-30">
       <div class="flex-1 items-center gap-3">
         <img src="img/logob.png" alt="Logos" class="h-10 sm:h-12 object-contain" />
         <div class="flex flex-col leading-tight">
-          <span class="font-bold text-lg sm:text-xl">Inventario · Impresoras</span>
-          <span class="text-xs opacity-60">IMPRESORA · MARCA · MODELO · SERIE · TONER · COLOR · ÁREA · FOTO</span>
+          <span class="font-bold text-lg sm:text-xl" style="color:var(--brand-ink)">Inventario · Impresoras</span>
+          <span class="text-xs opacity-60">Sistema de Interconectividad Control y Enlace Penitenciario</span>
         </div>
       </div>
       <div class="flex-none items-center gap-2 pr-2">
-        <!-- En móvil escondo algunos y dejo menú compacto -->
+        <!-- Desktop -->
         <div class="hidden sm:flex items-center gap-2">
           <label class="swap swap-rotate mr-1">
-            <input type="checkbox" class="theme-controller" value="dracula" />
+            <input type="checkbox" class="theme-controller" value="light" />
             <svg class="swap-off size-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 0 9.9 6.32A9 9 0 1 1 5 12z"/></svg>
             <svg class="swap-on size-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/></svg>
           </label>
-          <button id="btnExportCSV"  class="btn btn-xs sm:btn-sm">CSV</button>
-          <button id="btnExportXLSX" class="btn btn-xs sm:btn-sm">XLSX</button>
+          <button id="btnExportCSV"  class="btn btn-xs sm:btn-sm btn-primary">CSV</button>
+          <button id="btnExportXLSX" class="btn btn-xs sm:btn-sm btn-primary">XLSX</button>
           <input id="fileImport" type="file" accept=".csv,.xlsx" class="hidden">
           <button id="btnImport" class="btn btn-xs sm:btn-sm">Importar</button>
           <button id="btnBackup"  class="btn btn-xs sm:btn-sm">Resp. JSON</button>
@@ -91,7 +167,7 @@
           <button id="btnEtiquetas" class="btn btn-xs sm:btn-sm btn-primary">Etiquetas</button>
         </div>
 
-        <!-- Menú compacto móvil -->
+        <!-- Móvil -->
         <div class="dropdown dropdown-end sm:hidden">
           <div tabindex="0" role="button" class="btn btn-ghost btn-circle">
             <svg xmlns="http://www.w3.org/2000/svg" class="size-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 6a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM12 13.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM12 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
@@ -103,14 +179,6 @@
             <li><a id="mBackup">Respaldar JSON</a></li>
             <li><a id="mRestore">Restaurar JSON</a></li>
             <li><a id="mEtiquetas" class="text-primary">Imprimir etiquetas</a></li>
-            <li class="menu-title mt-1">Tema</li>
-            <li>
-              <label class="swap swap-rotate px-2">
-                <input type="checkbox" class="theme-controller" value="dracula" />
-                <span class="swap-off">Claro</span>
-                <span class="swap-on">Oscuro</span>
-              </label>
-            </li>
           </ul>
         </div>
       </div>
@@ -118,11 +186,11 @@
 
     <main class="max-w-6xl mx-auto p-3 sm:p-4">
       <!-- Filtros -->
-      <section class="w-full">
+      <section class="w-full brand-card p-3 sm:p-4">
         <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
           <label class="input input-bordered flex items-center gap-2 sm:col-span-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="size-5 opacity-60" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2a8 8 0 1 1-5.293 13.707l-2.853 2.853a1 1 0 0 1-1.414-1.414l2.853-2.853A8 8 0 0 1 10 2zm0 2a6 6 0 1 0 .001 12.001A6 6 0 0 0 10 4z"/></svg>
-            <input id="q" type="text" placeholder="Buscar: impresora, marca, modelo, serie, tóner, área..." class="grow" />
+            <input id="q" type="text" placeholder="Buscar: código, impresora, marca, modelo, serie, tóner, área..." class="grow" />
           </label>
           <select id="fColor" class="select select-bordered">
             <option value="">Color: Todos</option>
@@ -137,16 +205,17 @@
 
       <!-- ====== Tabla (md+) ====== -->
       <section class="mt-3 w-full hidden md:block">
-        <div class="overflow-x-auto shadow rounded-xl">
+        <div class="overflow-x-auto shadow rounded-xl bg-white">
           <table class="table">
             <thead>
               <tr>
                 <th></th>
+                <th>CÓDIGO</th>
                 <th>IMPRESORA</th>
                 <th>MARCA</th>
                 <th>MODELO</th>
                 <th>SERIE</th>
-                <th>TONER</th>
+                <th>TÓNER</th>
                 <th>COLOR</th>
                 <th>ÁREA</th>
                 <th></th>
@@ -164,7 +233,7 @@
     </main>
 
     <!-- FAB -->
-    <button class="btn btn-primary btn-circle fixed bottom-5 right-5 shadow-2xl" onclick="openNew()">
+    <button class="btn btn-primary btn-circle fixed bottom-5 right-5 shadow-2xl" onclick="openNew()" aria-label="Agregar">
       <svg xmlns="http://www.w3.org/2000/svg" class="size-6" viewBox="0 0 24 24" fill="currentColor"><path d="M11 4a1 1 0 0 1 2 0v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7H4a1 1 0 1 1 0-2h7V4z"/></svg>
     </button>
 
@@ -172,10 +241,14 @@
     <dialog id="modalForm" class="modal">
       <div class="modal-box max-w-2xl">
         <form method="dialog">
-          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Cerrar">✕</button>
         </form>
-        <h3 id="formTitle" class="font-bold text-lg">Nueva impresora</h3>
+        <h3 id="formTitle" class="font-bold text-lg" style="color:var(--brand-ink)">Nueva impresora</h3>
         <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="form-control">
+            <span class="label-text">CÓDIGO INVENTARIO*</span>
+            <input id="codigo" class="input input-bordered" placeholder="INV-001 / Patrimonio / Sticker" required>
+          </label>
           <label class="form-control">
             <span class="label-text">IMPRESORA*</span>
             <input id="impresora" class="input input-bordered" placeholder="Alias / Nombre" required>
@@ -245,7 +318,7 @@
         </div>
 
         <div class="modal-action">
-          <button class="btn btn-ghost" onclick="modalForm.close()" type="button">Cancelar</button>
+          <button class="btn" onclick="modalForm.close()" type="button">Cancelar</button>
           <button id="btnSave" class="btn btn-primary" type="button" onclick="savePrinter()">Guardar</button>
         </div>
       </div>
@@ -254,11 +327,12 @@
     <!-- Modal Ver -->
     <dialog id="modalView" class="modal">
       <div class="modal-box max-w-lg">
-        <form method="dialog"><button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button></form>
+        <form method="dialog"><button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Cerrar">✕</button></form>
         <div class="flex items-start gap-4">
           <img id="v_foto" class="w-28 h-28 object-cover rounded-xl border border-base-300 bg-base-100" alt="foto">
           <div class="grow">
-            <h3 id="v_impresora" class="font-bold text-lg"></h3>
+            <h3 id="v_impresora" class="font-bold text-lg" style="color:var(--brand-ink)"></h3>
+            <p class="text-sm"><span class="chip">Código: <b id="v_codigo"></b></span></p>
             <p class="text-sm opacity-70">Marca: <span id="v_marca"></span></p>
             <p class="text-sm opacity-70">Modelo: <span id="v_modelo"></span></p>
             <p class="text-sm">Serie: <b id="v_serie"></b></p>
@@ -271,7 +345,7 @@
     </dialog>
 
     <!-- Toasts -->
-    <div id="toasts" class="toast toast-end z-50"></div>
+    <div id="toasts" class="toast-stack"></div>
   </div>
 
   <!-- ====== PRINT AREA (solo al imprimir) ====== -->
@@ -293,7 +367,7 @@
     const emptyStateDesk = $('emptyStateDesk');
     const emptyStateMob  = $('emptyStateMob');
 
-    const inputs = ['impresora','marca','modelo','serie','toner','color','area'];
+    const inputs = ['codigo','impresora','marca','modelo','serie','toner','color','area'];
 
     // ====== Storage ======
     function load(){
@@ -316,7 +390,7 @@
       const fArea = $('fArea').value;
 
       const filtered = data.filter(p=>{
-        const text = [p.impresora,p.marca,p.modelo,p.serie,p.toner,p.color,p.area].join(' ').toLowerCase();
+        const text = [p.codigo,p.impresora,p.marca,p.modelo,p.serie,p.toner,p.color,p.area].join(' ').toLowerCase();
         const passQ = !q || text.includes(q);
         const passC = !fColor || (p.color||'') === fColor;
         const passA = !fArea || (p.area||'') === fArea;
@@ -345,9 +419,10 @@
       return `
       <tr class="align-top">
         <td class="py-2">${thumb}</td>
+        <td><span class="chip">${escapeHTML(p.codigo||'—')}</span></td>
         <td>
           <div class="flex flex-col">
-            <span class="font-semibold">${escapeHTML(p.impresora||'')}</span>
+            <span class="font-semibold" style="color:var(--brand-ink)">${escapeHTML(p.impresora||'')}</span>
             <span class="text-xs opacity-60">${escapeHTML(p.area||'—')}</span>
           </div>
         </td>
@@ -378,7 +453,10 @@
           <div class="min-w-0">
             <div class="m-title truncate">${escapeHTML(p.impresora||'Sin nombre')}</div>
             <div class="m-sub">${escapeHTML(p.marca||'—')} · ${escapeHTML(p.modelo||'—')}</div>
-            <div class="mt-1">${badgeColor(p.color)}</div>
+            <div class="mt-1 flex flex-wrap gap-1">
+              <span class="chip">Código: ${escapeHTML(p.codigo||'—')}</span>
+              ${badgeColor(p.color)}
+            </div>
           </div>
           <div class="ml-auto">
             <div class="join join-vertical *:join-item">
@@ -406,7 +484,6 @@
     }
 
     // ====== Etiquetas (impresión) ======
-    $('mEtiquetas')?.addEventListener('click', ()=> $('btnEtiquetas').click());
     document.getElementById('btnEtiquetas').addEventListener('click', ()=>{
       const list = window.__filteredForLabels || data;
       const grid = $('labelsGrid');
@@ -418,6 +495,7 @@
           <img src="img/logob.png" class="logo" alt="logo">
           <div class="meta">
             <div class="title">${escapeHTML(item.impresora || '—')}</div>
+            <div class="muted">Código: <b>${escapeHTML(item.codigo || '—')}</b></div>
             <div class="muted">Marca: ${escapeHTML(item.marca || '—')}</div>
             <div class="muted">Modelo: ${escapeHTML(item.modelo || '—')}</div>
             <div>Núm. Serie: <b>${escapeHTML(item.serie || '—')}</b></div>
@@ -427,7 +505,10 @@
           <canvas class="qr"></canvas>
         `;
         grid.appendChild(card);
-        const value = item.serie?.trim() ? item.serie.trim() : `${item.impresora||''} | ${item.marca||''} ${item.modelo||''}`;
+        // QR usa prioridad: codigo > serie > combinación
+        const value = item.codigo?.trim() ? item.codigo.trim()
+                    : item.serie?.trim() ? item.serie.trim()
+                    : `${item.impresora||''} | ${item.marca||''} ${item.modelo||''}`;
         const canvas = card.querySelector('canvas.qr');
         try { QRCode.toCanvas(canvas, value, { margin: 0, width: 140 }); } catch(e){}
       }
@@ -471,13 +552,14 @@
       const p = data.find(x=>x.id===id);
       if(!p) return;
       $('v_impresora').textContent = p.impresora || '—';
-      $('v_marca').textContent     = p.marca || '—';
-      $('v_modelo').textContent    = p.modelo || '—';
-      $('v_serie').textContent     = p.serie || '—';
-      $('v_toner').textContent     = p.toner || '—';
-      $('v_area').textContent      = p.area  || '—';
-      $('v_color').textContent     = p.color || '—';
-      $('v_foto').src              = p.foto || '';
+      $('v_codigo').textContent    = p.codigo   || '—';
+      $('v_marca').textContent     = p.marca    || '—';
+      $('v_modelo').textContent    = p.modelo   || '—';
+      $('v_serie').textContent     = p.serie    || '—';
+      $('v_toner').textContent     = p.toner    || '—';
+      $('v_area').textContent      = p.area     || '—';
+      $('v_color').textContent     = p.color    || '—';
+      $('v_foto').src              = p.foto     || '';
       modalView.showModal();
     }
 
@@ -487,7 +569,7 @@
       if(confirm(`¿Eliminar "${item.impresora}"?`)){
         data = data.filter(x=>x.id!==id);
         save(data); render();
-        toast('Eliminado','error');
+        toast('Eliminado', 'error', 'Se quitó del inventario.');
       }
     }
 
@@ -498,7 +580,9 @@
         obj[k] = el.value.trim();
       }
       obj.foto = $('fotoPreview').src || '';
-      if(!obj.impresora || !obj.modelo){ toast('Completa IMPRESORA y MODELO','warning'); return null; }
+      if(!obj.codigo || !obj.impresora || !obj.modelo){
+        toast('Faltan campos', 'warning', 'Completa CÓDIGO, IMPRESORA y MODELO.'); return null;
+      }
       return obj;
     }
 
@@ -507,18 +591,18 @@
       if(!fd) return;
       if(editingId){
         data = data.map(p => p.id===editingId ? ({...p, ...fd}) : p);
-        toast('Actualizado','info');
+        toast('Actualizado', 'info', 'Cambios guardados correctamente.');
       }else{
         data.unshift({ id: crypto.randomUUID(), ...fd });
-        toast('Guardado','success');
+        toast('Guardado', 'success', 'Equipo agregado al inventario.');
       }
       save(data); render(); modalForm.close();
     }
 
-    // ====== CSV / XLSX (sin foto para mantener tamaño) ======
+    // ====== CSV / XLSX (sin foto para tamaño) ======
     function toCSV(list){
-      const headers = ['IMPRESORA','MARCA','MODELO','NÚMERO DE SERIE','TONER','COLOR','ÁREA'];
-      const keys    = ['impresora','marca','modelo','serie','toner','color','area'];
+      const headers = ['CÓDIGO INVENTARIO','IMPRESORA','MARCA','MODELO','NÚMERO DE SERIE','TÓNER','COLOR','ÁREA'];
+      const keys    = ['codigo','impresora','marca','modelo','serie','toner','color','area'];
       const lines = [headers.join(',')].concat(list.map(o => keys.map(k => csvEscape(o[k] ?? '')).join(',')));
       return lines.join('\n');
     }
@@ -531,20 +615,21 @@
       setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
     }
 
-    // Botones desktop
+    // Desktop: export
     $('btnExportCSV').addEventListener('click', ()=>{
       const csv = toCSV(data);
       download('IMPRESORAS.csv', new Blob([csv], {type:'text/csv;charset=utf-8;'}));
-      toast('CSV exportado','success');
+      toast('CSV exportado','success','Archivo listo para descargar.');
     });
     $('btnExportXLSX').addEventListener('click', ()=>{
-      const headers = ['IMPRESORA','MARCA','MODELO','NÚMERO DE SERIE','TONER','COLOR','ÁREA'];
+      const headers = ['CÓDIGO INVENTARIO','IMPRESORA','MARCA','MODELO','NÚMERO DE SERIE','TÓNER','COLOR','ÁREA'];
       const rows = data.map(o => ({
+        'CÓDIGO INVENTARIO': o.codigo ?? '',
         'IMPRESORA': o.impresora ?? '',
         'MARCA': o.marca ?? '',
         'MODELO': o.modelo ?? '',
         'NÚMERO DE SERIE': o.serie ?? '',
-        'TONER': o.toner ?? '',
+        'TÓNER': o.toner ?? '',
         'COLOR': o.color ?? '',
         'ÁREA': o.area ?? ''
       }));
@@ -553,14 +638,16 @@
       XLSX.utils.book_append_sheet(wb, ws, 'IMPRESORAS');
       const out = XLSX.write(wb, { bookType:'xlsx', type:'array' });
       download('IMPRESORAS.xlsx', new Blob([out], {type: "application/octet-stream"}));
-      toast('XLSX exportado','success');
+      toast('XLSX exportado','success','Hoja generada correctamente.');
     });
-    // Botones móvil (menú)
+
+    // Móvil: menú
     $('mCSV')?.addEventListener('click', ()=> $('btnExportCSV').click());
     $('mXLSX')?.addEventListener('click', ()=> $('btnExportXLSX').click());
     $('mImport')?.addEventListener('click', ()=> $('fileImport').click());
     $('mBackup')?.addEventListener('click', ()=> $('btnBackup').click());
     $('mRestore')?.addEventListener('click', ()=> $('btnRestore').click());
+    $('mEtiquetas')?.addEventListener('click', ()=> $('btnEtiquetas').click());
 
     // Import
     document.getElementById('btnImport').addEventListener('click', ()=> $('fileImport').click());
@@ -579,47 +666,49 @@
         const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
         importRows(rows);
       }else{
-        toast('Formato no soportado','error');
+        toast('Formato no soportado','error','Usa CSV o XLSX.');
       }
       e.target.value = '';
     });
 
-    // Backup / Restore
-    $('btnBackup').addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8;'});
-      download(`IMPRESORAS_BACKUP_${new Date().toISOString().slice(0,10)}.json`, blob);
-      toast('Respaldo JSON generado','success');
-    });
-    $('btnRestore').addEventListener('click', ()=> $('fileRestore').click());
-    $('fileRestore').addEventListener('change', async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      try{
-        const text = await file.text();
-        const arr = JSON.parse(text);
-        if(!Array.isArray(arr)) throw new Error('Formato inválido');
-        data = arr.map(x => ({
-          id: x.id || crypto.randomUUID(),
-          impresora: x.impresora || '',
-          marca: x.marca || '',
-          modelo: x.modelo || '',
-          serie: x.serie || '',
-          toner: x.toner || '',
-          color: x.color || '',
-          area: x.area || '',
-          foto: x.foto || ''
-        }));
-        save(data); render();
-        toast('Restaurado desde JSON','success');
-      }catch(err){
-        console.error(err);
-        toast('JSON inválido','error');
-      } finally {
-        e.target.value = '';
-      }
-    });
+    function importRows(rows){
+      const norm = rows.map(r => ({
+        codigo:    String(r['CÓDIGO INVENTARIO'] ?? r['CODIGO INVENTARIO'] ?? r['codigo'] ?? r['Código'] ?? '').trim(),
+        impresora: String(r['IMPRESORA'] ?? r['Impresora'] ?? r['impresora'] ?? '').trim(),
+        marca:     String(r['MARCA'] ?? r['Marca'] ?? r['marca'] ?? '').trim(),
+        modelo:    String(r['MODELO'] ?? r['Modelo'] ?? r['modelo'] ?? '').trim(),
+        serie:     String(r['NÚMERO DE SERIE'] ?? r['NUMERO DE SERIE'] ?? r['SERIE'] ?? r['Serie'] ?? r['serie'] ?? '').trim(),
+        toner:     String(r['TÓNER'] ?? r['TONER'] ?? r['Toner'] ?? r['toner'] ?? '').trim(),
+        color:     String(r['COLOR'] ?? r['Color'] ?? r['color'] ?? '').trim(),
+        area:      String(r['ÁREA'] ?? r['AREA'] ?? r['Area'] ?? r['area'] ?? '').trim(),
+      })).filter(x => x.codigo || x.impresora || x.modelo || x.serie);
 
-    // ====== CSV básico ======
+      let added = 0;
+      for(const row of norm){
+        let idx = -1;
+        if(row.codigo) idx = data.findIndex(x => (x.codigo||'').toLowerCase()===row.codigo.toLowerCase());
+        if(idx < 0 && row.serie) idx = data.findIndex(x => (x.serie||'').toLowerCase()===row.serie.toLowerCase());
+        if(idx < 0){
+          idx = data.findIndex(x =>
+            (x.impresora||'').toLowerCase()===row.impresora.toLowerCase() &&
+            (x.marca||'').toLowerCase()===row.marca.toLowerCase() &&
+            (x.modelo||'').toLowerCase()===row.modelo.toLowerCase()
+          );
+        }
+        if(idx >= 0){
+          for(const k of ['codigo','impresora','marca','modelo','serie','toner','color','area']){
+            if(!data[idx][k] && row[k]) data[idx][k] = row[k];
+          }
+        }else{
+          data.push({ id: crypto.randomUUID(), ...row });
+          added++;
+        }
+      }
+      save(data); render();
+      toast(`Importadas ${added} filas`, 'info', 'Se actualizaron/añadieron registros.');
+    }
+
+    // CSV básico
     function parseCSV(str){
       const lines = str.replace(/\r/g,'').split('\n').filter(Boolean);
       if(!lines.length) return [];
@@ -680,7 +769,7 @@
         camPreview.classList.remove('hidden'); camCanvas.classList.add('hidden');
         btnShot.disabled = false; btnRetake.classList.add('hidden');
       }catch(e){
-        toast('No se pudo acceder a la cámara','error');
+        toast('No se pudo acceder a la cámara','error','Revisa permisos del navegador.');
       }
     }
     function stopCamera(){
@@ -737,39 +826,61 @@
     $('fColor').addEventListener('change', render);
     $('fArea').addEventListener('change', render);
 
-    // ====== Toast ======
-    function toast(msg, type='success'){
+    // ====== Toasts UI mejorados ======
+    function toast(title, type='success', subtitle=''){
+      const icons = {
+        success: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M9.55 17.05 4.5 12l1.4-1.4 3.65 3.6 8.55-8.55L19.5 7l-9.95 10.05Z"/></svg>',
+        error:   '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="m12 10.586 4.95-4.95 1.414 1.414L13.414 12l4.95 4.95-1.414 1.414L12 13.414l-4.95 4.95-1.414-1.414L10.586 12l-4.95-4.95L7.05 5.636 12 10.586Z"/></svg>',
+        info:    '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M11 9h2V7h-2v2Zm0 8h2v-6h-2v6Zm1-16a10 10 0 1 1 0 20 10 10 0 0 1 0-20Z"/></svg>',
+        warning: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>'
+      };
       const el = document.createElement('div');
-      const styles = { success:'alert-success', error:'alert-error', info:'alert-info', warning:'alert-warning' };
-      el.className = `alert ${styles[type]||'alert-info'} shadow`;
-      el.innerHTML = `<span>${escapeHTML(msg)}</span>`;
+      el.className = 'tst';
+      el.innerHTML = `
+        <div class="ico">${icons[type]||icons.info}</div>
+        <div class="grow">
+          <div class="msg">${escapeHTML(title)}</div>
+          ${subtitle ? `<div class="sub">${escapeHTML(subtitle)}</div>` : ''}
+        </div>
+        <div class="bar" aria-hidden="true"><span></span></div>
+      `;
       document.getElementById('toasts').appendChild(el);
-      setTimeout(()=> el.remove(), 2500);
+      setTimeout(()=> el.remove(), 2600);
     }
 
-    // ====== Partículas ======
-    window.addEventListener('DOMContentLoaded', async () => {
+    // Backup / Restore
+    $('btnBackup').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8;'});
+      download(`IMPRESORAS_BACKUP_${new Date().toISOString().slice(0,10)}.json`, blob);
+      toast('Respaldo JSON generado','success','Se guardó el archivo.');
+    });
+    $('btnRestore').addEventListener('click', ()=> $('fileRestore').click());
+    $('fileRestore').addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
       try{
-        if (window.tsParticles && document.getElementById('particles')) {
-          await window.tsParticles.load({
-            id: "particles",
-            options: {
-              background: { color: "transparent" },
-              fpsLimit: 30,
-              particles: {
-                number: { value: 40, density: { enable: true, area: 800 } },
-                color: { value: "#5b6ea8" },
-                opacity: { value: 0.2 },
-                size: { value: { min: 1, max: 3 } },
-                move: { enable: true, speed: 0.6, direction: "none", outModes: { default: "out" } },
-                links: { enable: true, distance: 120, opacity: 0.15, width: 1, color: "#5b6ea8" }
-              },
-              detectRetina: true
-            }
-          });
-        }
-      }catch(e){
-        console.warn('Particles no cargaron:', e);
+        const text = await file.text();
+        const arr = JSON.parse(text);
+        if(!Array.isArray(arr)) throw new Error('Formato inválido');
+        data = arr.map(x => ({
+          id: x.id || crypto.randomUUID(),
+          codigo: x.codigo || x['codigo_inventario'] || '',
+          impresora: x.impresora || '',
+          marca: x.marca || '',
+          modelo: x.modelo || '',
+          serie: x.serie || '',
+          toner: x.toner || '',
+          color: x.color || '',
+          area: x.area || '',
+          foto: x.foto || ''
+        }));
+        save(data); render();
+        toast('Restaurado desde JSON','success','Inventario cargado.');
+      }catch(err){
+        console.error(err);
+        toast('JSON inválido','error','No se pudo leer el archivo.');
+      } finally {
+        e.target.value = '';
       }
     });
 
@@ -778,4 +889,3 @@
   </script>
 </body>
 </html>
-
