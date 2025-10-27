@@ -25,26 +25,12 @@
   </script>
 
   <style>
-    /* Tabla → tarjetas en móvil */
-    @media (max-width: 768px){
-      table thead { display:none; }
-      table tbody, table tr, table td { display:block; width:100%; }
-      table tr { margin-bottom:.75rem; border:1px solid rgba(2,6,23,.08); border-radius:1rem; background:#fff; }
-      table td { border-bottom:1px dashed rgba(2,6,23,.06); padding:.75rem 1rem; }
-      table td:last-child { border-bottom:0; }
-      table td::before{
-        content: attr(data-label);
-        display:block; font-size:.75rem; text-transform:uppercase; opacity:.6; margin-bottom:.25rem;
-      }
-    }
-
-    /* Área de impresión de etiquetas */
+    /* ===== Imprimir etiquetas ===== */
     @media print {
       body { background: #fff !important; }
       #app { display:none !important; }
       #printArea { display:block !important; }
     }
-    /* Etiquetas A4 (grid 3 x auto) */
     #printArea { display:none; padding: 10mm; }
     .labels-grid { display:grid; gap:6mm; grid-template-columns: repeat(3, 1fr); }
     .label {
@@ -57,10 +43,18 @@
     .label .meta .title{ font-weight:700; font-size:12px; }
     .label .meta .muted{ opacity:.7; }
 
-    /* Fondo partículas tenue */
+    /* ===== Fondo partículas tenue ===== */
     #particles { position:fixed; inset:0; z-index:0; opacity:.15; pointer-events:none; }
-    /* Asegura que el contenido quede arriba del fondo */
     #app { position: relative; z-index: 1; }
+
+    /* ===== Cards móviles ===== */
+    .m-card{ background:oklch(var(--b1)); border:1px solid oklch(var(--b3)/.5); border-radius:1rem; padding:0.75rem; box-shadow:0 10px 24px rgba(2,6,23,.06)}
+    .m-thumb{ width:3.5rem; height:3.5rem; border-radius:0.75rem; object-fit:cover; background:oklch(var(--b2)); border:1px solid oklch(var(--b3))}
+    .m-title{ font-weight:700; line-height:1.1 }
+    .m-sub{ font-size:.75rem; opacity:.7 }
+    .m-row{ display:grid; grid-template-columns: 1fr 1fr; gap:.5rem; margin-top:.5rem }
+    .m-k{ font-size:.65rem; text-transform:uppercase; opacity:.6 }
+    .m-v{ font-size:.875rem }
   </style>
 </head>
 
@@ -70,42 +64,65 @@
 
   <!-- ====== APP ====== -->
   <div id="app">
-    <!-- Navbar institucional -->
+    <!-- Navbar -->
     <header class="navbar bg-base-100 shadow-sm sticky top-0 z-30">
       <div class="flex-1 items-center gap-3">
-        <img src="img/logob.png" alt="Logos institucionales" class="h-10 sm:h-12 object-contain" />
+        <img src="img/logob.png" alt="Logos" class="h-10 sm:h-12 object-contain" />
         <div class="flex flex-col leading-tight">
           <span class="font-bold text-lg sm:text-xl">Inventario · Impresoras</span>
           <span class="text-xs opacity-60">IMPRESORA · MARCA · MODELO · SERIE · TONER · COLOR · ÁREA · FOTO</span>
         </div>
       </div>
       <div class="flex-none items-center gap-2 pr-2">
-        <label class="swap swap-rotate mr-1">
-          <input type="checkbox" class="theme-controller" value="dracula" />
-          <svg class="swap-off size-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 0 9.9 6.32A9 9 0 1 1 5 12z"/></svg>
-          <svg class="swap-on size-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/></svg>
-        </label>
+        <!-- En móvil escondo algunos y dejo menú compacto -->
+        <div class="hidden sm:flex items-center gap-2">
+          <label class="swap swap-rotate mr-1">
+            <input type="checkbox" class="theme-controller" value="dracula" />
+            <svg class="swap-off size-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 0 9.9 6.32A9 9 0 1 1 5 12z"/></svg>
+            <svg class="swap-on size-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/></svg>
+          </label>
+          <button id="btnExportCSV"  class="btn btn-xs sm:btn-sm">CSV</button>
+          <button id="btnExportXLSX" class="btn btn-xs sm:btn-sm">XLSX</button>
+          <input id="fileImport" type="file" accept=".csv,.xlsx" class="hidden">
+          <button id="btnImport" class="btn btn-xs sm:btn-sm">Importar</button>
+          <button id="btnBackup"  class="btn btn-xs sm:btn-sm">Resp. JSON</button>
+          <input id="fileRestore" type="file" accept=".json" class="hidden">
+          <button id="btnRestore" class="btn btn-xs sm:btn-sm">Restaurar</button>
+          <button id="btnEtiquetas" class="btn btn-xs sm:btn-sm btn-primary">Etiquetas</button>
+        </div>
 
-        <button id="btnExportCSV"  class="btn btn-xs sm:btn-sm">CSV</button>
-        <button id="btnExportXLSX" class="btn btn-xs sm:btn-sm">XLSX</button>
-        <input id="fileImport" type="file" accept=".csv,.xlsx" class="hidden">
-        <button id="btnImport" class="btn btn-xs sm:btn-sm">Importar</button>
-
-        <button id="btnBackup"  class="btn btn-xs sm:btn-sm">Respaldar JSON</button>
-        <input id="fileRestore" type="file" accept=".json" class="hidden">
-        <button id="btnRestore" class="btn btn-xs sm:btn-sm">Restaurar JSON</button>
-
-        <button id="btnEtiquetas" class="btn btn-xs sm:btn-sm btn-primary">Etiquetas</button>
+        <!-- Menú compacto móvil -->
+        <div class="dropdown dropdown-end sm:hidden">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-circle">
+            <svg xmlns="http://www.w3.org/2000/svg" class="size-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 6a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM12 13.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM12 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
+          </div>
+          <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
+            <li><a id="mCSV">Exportar CSV</a></li>
+            <li><a id="mXLSX">Exportar XLSX</a></li>
+            <li><a id="mImport">Importar</a></li>
+            <li><a id="mBackup">Respaldar JSON</a></li>
+            <li><a id="mRestore">Restaurar JSON</a></li>
+            <li><a id="mEtiquetas" class="text-primary">Imprimir etiquetas</a></li>
+            <li class="menu-title mt-1">Tema</li>
+            <li>
+              <label class="swap swap-rotate px-2">
+                <input type="checkbox" class="theme-controller" value="dracula" />
+                <span class="swap-off">Claro</span>
+                <span class="swap-on">Oscuro</span>
+              </label>
+            </li>
+          </ul>
+        </div>
       </div>
     </header>
 
     <main class="max-w-6xl mx-auto p-3 sm:p-4">
       <!-- Filtros -->
       <section class="w-full">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
-          <label class="input input-bordered flex items-center gap-2 md:col-span-3">
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+          <label class="input input-bordered flex items-center gap-2 sm:col-span-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="size-5 opacity-60" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2a8 8 0 1 1-5.293 13.707l-2.853 2.853a1 1 0 0 1-1.414-1.414l2.853-2.853A8 8 0 0 1 10 2zm0 2a6 6 0 1 0 .001 12.001A6 6 0 0 0 10 4z"/></svg>
-            <input id="q" type="text" placeholder="Buscar: impresora, marca, modelo, serie, toner, área..." class="grow" />
+            <input id="q" type="text" placeholder="Buscar: impresora, marca, modelo, serie, tóner, área..." class="grow" />
           </label>
           <select id="fColor" class="select select-bordered">
             <option value="">Color: Todos</option>
@@ -118,8 +135,8 @@
         </div>
       </section>
 
-      <!-- Tabla -->
-      <section class="mt-3 w-full">
+      <!-- ====== Tabla (md+) ====== -->
+      <section class="mt-3 w-full hidden md:block">
         <div class="overflow-x-auto shadow rounded-xl">
           <table class="table">
             <thead>
@@ -138,8 +155,12 @@
             <tbody id="tbodyPrinters"></tbody>
           </table>
         </div>
-        <p id="emptyState" class="text-center text-sm opacity-70 py-6 hidden">Sin registros. Agrega una impresora con “+”.</p>
+        <p id="emptyStateDesk" class="text-center text-sm opacity-70 py-6 hidden">Sin registros. Agrega una impresora con “+”.</p>
       </section>
+
+      <!-- ====== Cards (móvil) ====== -->
+      <section class="mt-3 grid gap-2 md:hidden" id="cardsList"></section>
+      <p id="emptyStateMob" class="md:hidden text-center text-sm opacity-70 py-6 hidden">Sin registros. Agrega una impresora con “+”.</p>
     </main>
 
     <!-- FAB -->
@@ -172,7 +193,7 @@
             <input id="serie" class="input input-bordered" placeholder="SN123456 / No. de serie">
           </label>
           <label class="form-control">
-            <span class="label-text">TONER</span>
+            <span class="label-text">TÓNER</span>
             <input id="toner" class="input input-bordered" placeholder="CF258A / TN-760 ...">
           </label>
           <label class="form-control">
@@ -188,7 +209,7 @@
             <input id="area" class="input input-bordered" placeholder="Recepción / Sistemas / Dirección">
           </label>
 
-          <!-- FOTO: subir o tomar -->
+          <!-- FOTO -->
           <div class="md:col-span-2">
             <div role="tablist" class="tabs tabs-boxed">
               <button id="tabUpload" class="tab tab-active" type="button" onclick="showPhotoTab('upload')">Subir foto</button>
@@ -202,10 +223,10 @@
             <!-- Cámara -->
             <div id="paneCamera" class="mt-2 hidden">
               <div class="flex items-center gap-2">
-                <video id="camPreview" class="rounded-box w-48 bg-black" autoplay playsinline></video>
-                <canvas id="camCanvas" class="rounded-box w-48 hidden"></canvas>
+                <video id="camPreview" class="rounded-box w-48 h-36 object-cover bg-black" autoplay playsinline></video>
+                <canvas id="camCanvas" class="rounded-box w-48 h-36 hidden"></canvas>
               </div>
-              <div class="mt-2 flex gap-2">
+              <div class="mt-2 flex flex-wrap gap-2">
                 <button id="btnStartCam" class="btn btn-sm" type="button" onclick="startCamera()">Iniciar cámara</button>
                 <button id="btnShot" class="btn btn-sm btn-primary" type="button" onclick="takeShot()" disabled>Tomar foto</button>
                 <button id="btnRetake" class="btn btn-sm hidden" type="button" onclick="retake()">Repetir</button>
@@ -235,7 +256,7 @@
       <div class="modal-box max-w-lg">
         <form method="dialog"><button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button></form>
         <div class="flex items-start gap-4">
-          <img id="v_foto" class="w-32 h-32 object-cover rounded-xl border border-base-300 bg-base-100" alt="foto">
+          <img id="v_foto" class="w-28 h-28 object-cover rounded-xl border border-base-300 bg-base-100" alt="foto">
           <div class="grow">
             <h3 id="v_impresora" class="font-bold text-lg"></h3>
             <p class="text-sm opacity-70">Marca: <span id="v_marca"></span></p>
@@ -268,7 +289,9 @@
     const modalForm = $('modalForm');
     const modalView = $('modalView');
     const tbody = $('tbodyPrinters');
-    const emptyState = $('emptyState');
+    const cardsList = $('cardsList');
+    const emptyStateDesk = $('emptyStateDesk');
+    const emptyStateMob  = $('emptyStateMob');
 
     const inputs = ['impresora','marca','modelo','serie','toner','color','area'];
 
@@ -306,8 +329,13 @@
       const current = selArea.value;
       selArea.innerHTML = '<option value="">Área: Todas</option>' + areas.map(a=>`<option ${a===current?'selected':''}>${escapeHTML(a)}</option>`).join('');
 
+      // Tabla (md+)
       tbody.innerHTML = filtered.map(p=>rowHTML(p)).join('');
-      emptyState.classList.toggle('hidden', filtered.length !== 0);
+      emptyStateDesk.classList.toggle('hidden', filtered.length !== 0);
+
+      // Cards (móvil)
+      cardsList.innerHTML = filtered.map(p=>cardHTML(p)).join('');
+      emptyStateMob.classList.toggle('hidden', filtered.length !== 0);
 
       window.__filteredForLabels = filtered;
     }
@@ -316,20 +344,20 @@
       const thumb = p.foto ? `<img src="${p.foto}" alt="foto" class="w-10 h-10 rounded-lg object-cover border border-base-300 bg-base-100" />` : `<div class="w-10 h-10 rounded-lg bg-base-300"></div>`;
       return `
       <tr class="align-top">
-        <td data-label="Foto" class="py-2">${thumb}</td>
-        <td data-label="IMPRESORA">
+        <td class="py-2">${thumb}</td>
+        <td>
           <div class="flex flex-col">
             <span class="font-semibold">${escapeHTML(p.impresora||'')}</span>
             <span class="text-xs opacity-60">${escapeHTML(p.area||'—')}</span>
           </div>
         </td>
-        <td data-label="MARCA">${escapeHTML(p.marca||'')}</td>
-        <td data-label="MODELO">${escapeHTML(p.modelo||'')}</td>
-        <td data-label="SERIE">${escapeHTML(p.serie||'')}</td>
-        <td data-label="TONER">${escapeHTML(p.toner||'')}</td>
-        <td data-label="COLOR">${badgeColor(p.color)}</td>
-        <td data-label="ÁREA">${escapeHTML(p.area||'')}</td>
-        <td data-label="Acciones">
+        <td>${escapeHTML(p.marca||'')}</td>
+        <td>${escapeHTML(p.modelo||'')}</td>
+        <td>${escapeHTML(p.serie||'')}</td>
+        <td>${escapeHTML(p.toner||'')}</td>
+        <td>${badgeColor(p.color)}</td>
+        <td>${escapeHTML(p.area||'')}</td>
+        <td>
           <div class="flex flex-wrap gap-1 justify-end">
             <button class="btn btn-xs" onclick='view("${p.id}")'>Ver</button>
             <button class="btn btn-xs" onclick='edit("${p.id}")'>Editar</button>
@@ -339,8 +367,47 @@
       </tr>`;
     }
 
+    function cardHTML(p){
+      const foto = p.foto
+        ? `<img src="${p.foto}" alt="foto" class="m-thumb border" />`
+        : `<div class="m-thumb border"></div>`;
+      return `
+      <article class="m-card">
+        <div class="flex items-start gap-3">
+          ${foto}
+          <div class="min-w-0">
+            <div class="m-title truncate">${escapeHTML(p.impresora||'Sin nombre')}</div>
+            <div class="m-sub">${escapeHTML(p.marca||'—')} · ${escapeHTML(p.modelo||'—')}</div>
+            <div class="mt-1">${badgeColor(p.color)}</div>
+          </div>
+          <div class="ml-auto">
+            <div class="join join-vertical *:join-item">
+              <button class="btn btn-xs" onclick='view("${p.id}")'>Ver</button>
+              <button class="btn btn-xs" onclick='edit("${p.id}")'>Editar</button>
+              <button class="btn btn-xs btn-error" onclick='del("${p.id}")'>Borrar</button>
+            </div>
+          </div>
+        </div>
+        <div class="m-row">
+          <div>
+            <div class="m-k">Serie</div>
+            <div class="m-v">${escapeHTML(p.serie||'—')}</div>
+          </div>
+          <div>
+            <div class="m-k">Tóner</div>
+            <div class="m-v">${escapeHTML(p.toner||'—')}</div>
+          </div>
+          <div>
+            <div class="m-k">Área</div>
+            <div class="m-v">${escapeHTML(p.area||'—')}</div>
+          </div>
+        </div>
+      </article>`;
+    }
+
     // ====== Etiquetas (impresión) ======
-    $('btnEtiquetas').addEventListener('click', ()=>{
+    $('mEtiquetas')?.addEventListener('click', ()=> $('btnEtiquetas').click());
+    document.getElementById('btnEtiquetas').addEventListener('click', ()=>{
       const list = window.__filteredForLabels || data;
       const grid = $('labelsGrid');
       grid.innerHTML = '';
@@ -464,12 +531,12 @@
       setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
     }
 
+    // Botones desktop
     $('btnExportCSV').addEventListener('click', ()=>{
       const csv = toCSV(data);
       download('IMPRESORAS.csv', new Blob([csv], {type:'text/csv;charset=utf-8;'}));
       toast('CSV exportado','success');
     });
-
     $('btnExportXLSX').addEventListener('click', ()=>{
       const headers = ['IMPRESORA','MARCA','MODELO','NÚMERO DE SERIE','TONER','COLOR','ÁREA'];
       const rows = data.map(o => ({
@@ -488,9 +555,15 @@
       download('IMPRESORAS.xlsx', new Blob([out], {type: "application/octet-stream"}));
       toast('XLSX exportado','success');
     });
+    // Botones móvil (menú)
+    $('mCSV')?.addEventListener('click', ()=> $('btnExportCSV').click());
+    $('mXLSX')?.addEventListener('click', ()=> $('btnExportXLSX').click());
+    $('mImport')?.addEventListener('click', ()=> $('fileImport').click());
+    $('mBackup')?.addEventListener('click', ()=> $('btnBackup').click());
+    $('mRestore')?.addEventListener('click', ()=> $('btnRestore').click());
 
-    // ====== Import CSV/XLSX ======
-    $('btnImport').addEventListener('click', ()=> $('fileImport').click());
+    // Import
+    document.getElementById('btnImport').addEventListener('click', ()=> $('fileImport').click());
     $('fileImport').addEventListener('change', async (e)=>{
       const file = e.target.files[0];
       if(!file) return;
@@ -511,42 +584,42 @@
       e.target.value = '';
     });
 
-    function importRows(rows){
-      const norm = rows.map(r => ({
-        impresora: String(r['IMPRESORA'] ?? r['Impresora'] ?? r['impresora'] ?? '').trim(),
-        marca:     String(r['MARCA'] ?? r['Marca'] ?? r['marca'] ?? '').trim(),
-        modelo:    String(r['MODELO'] ?? r['Modelo'] ?? r['modelo'] ?? '').trim(),
-        serie:     String(r['NÚMERO DE SERIE'] ?? r['NUMERO DE SERIE'] ?? r['SERIE'] ?? r['Serie'] ?? r['serie'] ?? '').trim(),
-        toner:     String(r['TONER'] ?? r['Toner'] ?? r['toner'] ?? '').trim(),
-        color:     String(r['COLOR'] ?? r['Color'] ?? r['color'] ?? '').trim(),
-        area:      String(r['ÁREA'] ?? r['AREA'] ?? r['Area'] ?? r['area'] ?? '').trim(),
-      })).filter(x => x.impresora || x.marca || x.modelo || x.serie);
-
-      let added = 0;
-      for(const row of norm){
-        let idx = -1;
-        if(row.serie) idx = data.findIndex(x => (x.serie||'').toLowerCase()===row.serie.toLowerCase());
-        if(idx < 0){
-          idx = data.findIndex(x =>
-            (x.impresora||'').toLowerCase()===row.impresora.toLowerCase() &&
-            (x.marca||'').toLowerCase()===row.marca.toLowerCase() &&
-            (x.modelo||'').toLowerCase()===row.modelo.toLowerCase()
-          );
-        }
-        if(idx >= 0){
-          for(const k of ['impresora','marca','modelo','serie','toner','color','area']){
-            if(!data[idx][k] && row[k]) data[idx][k] = row[k];
-          }
-        }else{
-          data.push({ id: crypto.randomUUID(), ...row });
-          added++;
-        }
+    // Backup / Restore
+    $('btnBackup').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8;'});
+      download(`IMPRESORAS_BACKUP_${new Date().toISOString().slice(0,10)}.json`, blob);
+      toast('Respaldo JSON generado','success');
+    });
+    $('btnRestore').addEventListener('click', ()=> $('fileRestore').click());
+    $('fileRestore').addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      try{
+        const text = await file.text();
+        const arr = JSON.parse(text);
+        if(!Array.isArray(arr)) throw new Error('Formato inválido');
+        data = arr.map(x => ({
+          id: x.id || crypto.randomUUID(),
+          impresora: x.impresora || '',
+          marca: x.marca || '',
+          modelo: x.modelo || '',
+          serie: x.serie || '',
+          toner: x.toner || '',
+          color: x.color || '',
+          area: x.area || '',
+          foto: x.foto || ''
+        }));
+        save(data); render();
+        toast('Restaurado desde JSON','success');
+      }catch(err){
+        console.error(err);
+        toast('JSON inválido','error');
+      } finally {
+        e.target.value = '';
       }
-      save(data); render();
-      toast(`Importadas ${added} filas`, 'info');
-    }
+    });
 
-    // CSV básico
+    // ====== CSV básico ======
     function parseCSV(str){
       const lines = str.replace(/\r/g,'').split('\n').filter(Boolean);
       if(!lines.length) return [];
@@ -585,7 +658,7 @@
     fotoFile?.addEventListener('change', async (e)=>{
       const file = e.target.files[0];
       if(!file) return;
-      const url = await fileToDataURL(file, 900, 900); // comprime
+      const url = await fileToDataURL(file, 900, 900);
       setPreview(url);
     });
 
@@ -659,43 +732,6 @@
       return { url };
     }
 
-    // ====== Respaldo total JSON (incluye fotos) ======
-    $('btnBackup').addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8;'});
-      download(`IMPRESORAS_BACKUP_${new Date().toISOString().slice(0,10)}.json`, blob);
-      toast('Respaldo JSON generado','success');
-    });
-
-    $('btnRestore').addEventListener('click', ()=> $('fileRestore').click());
-    $('fileRestore').addEventListener('change', async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      try{
-        const text = await file.text();
-        const arr = JSON.parse(text);
-        if(!Array.isArray(arr)) throw new Error('Formato inválido');
-        // Normaliza por si faltan campos
-        data = arr.map(x => ({
-          id: x.id || crypto.randomUUID(),
-          impresora: x.impresora || '',
-          marca: x.marca || '',
-          modelo: x.modelo || '',
-          serie: x.serie || '',
-          toner: x.toner || '',
-          color: x.color || '',
-          area: x.area || '',
-          foto: x.foto || ''
-        }));
-        save(data); render();
-        toast('Restaurado desde JSON','success');
-      }catch(err){
-        console.error(err);
-        toast('JSON inválido','error');
-      } finally {
-        e.target.value = '';
-      }
-    });
-
     // ====== Búsqueda/Filtros ======
     $('q').addEventListener('input', render);
     $('fColor').addEventListener('change', render);
@@ -711,7 +747,7 @@
       setTimeout(()=> el.remove(), 2500);
     }
 
-    // ====== Partículas tenues (corregido) ======
+    // ====== Partículas ======
     window.addEventListener('DOMContentLoaded', async () => {
       try{
         if (window.tsParticles && document.getElementById('particles')) {
@@ -742,3 +778,4 @@
   </script>
 </body>
 </html>
+
