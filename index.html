@@ -12,6 +12,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- QRCode (para etiquetas) -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.5/build/qrcode.min.js"></script>
+  <!-- ZIP utils -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -159,11 +162,17 @@
           </label>
           <button id="btnExportCSV"  class="btn btn-xs sm:btn-sm btn-primary">CSV</button>
           <button id="btnExportXLSX" class="btn btn-xs sm:btn-sm btn-primary">XLSX</button>
+          <button id="btnExportZIP"  class="btn btn-xs sm:btn-sm btn-primary">ZIP</button>
           <input id="fileImport" type="file" accept=".csv,.xlsx" class="hidden">
           <button id="btnImport" class="btn btn-xs sm:btn-sm">Importar</button>
           <button id="btnBackup"  class="btn btn-xs sm:btn-sm">Resp. JSON</button>
           <input id="fileRestore" type="file" accept=".json" class="hidden">
           <button id="btnRestore" class="btn btn-xs sm:btn-sm">Restaurar</button>
+
+          <!-- Import ZIP -->
+          <input id="fileImportZIP" type="file" accept=".zip" class="hidden">
+          <button id="btnImportZIP" class="btn btn-xs sm:btn-sm">Importar ZIP</button>
+
           <button id="btnEtiquetas" class="btn btn-xs sm:btn-sm btn-primary">Etiquetas</button>
         </div>
 
@@ -175,7 +184,9 @@
           <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
             <li><a id="mCSV">Exportar CSV</a></li>
             <li><a id="mXLSX">Exportar XLSX</a></li>
+            <li><a id="mZIP">Exportar ZIP</a></li>
             <li><a id="mImport">Importar</a></li>
+            <li><a id="mImportZIP">Importar ZIP</a></li>
             <li><a id="mBackup">Respaldar JSON</a></li>
             <li><a id="mRestore">Restaurar JSON</a></li>
             <li><a id="mEtiquetas" class="text-primary">Imprimir etiquetas</a></li>
@@ -641,15 +652,64 @@
       toast('XLSX exportado','success','Hoja generada correctamente.');
     });
 
-    // Móvil: menú
+    // ===== ZIP: exportar (CSV + JSON + imágenes) =====
+    function dataURLtoBlob(dataURL){
+      if(!dataURL || !dataURL.startsWith('data:')) return null;
+      const [meta, b64] = dataURL.split(',');
+      const mimeMatch = meta.match(/data:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+      const bin = atob(b64);
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      return new Blob([u8], { type: mime });
+    }
+    function safeName(s){
+      return (s||'').toString().trim().replace(/[^a-z0-9_\-\.]/gi,'_').slice(0,80);
+    }
+    async function exportZIP(){
+      const zip = new JSZip();
+
+      // Datos
+      const list = data || [];
+      zip.file('data.json', JSON.stringify(list, null, 2));
+      zip.file('IMPRESORAS.csv', toCSV(list));
+
+      // Imágenes
+      const images = zip.folder('imagenes');
+      let auto = 0;
+      for(const item of list){
+        if(item.foto && item.foto.startsWith('data:')){
+          const isPNG = item.foto.startsWith('data:image/png');
+          const ext = isPNG ? 'png' : 'jpg';
+          const base =
+            safeName(item.codigo) ||
+            safeName(item.serie) ||
+            safeName(item.impresora) ||
+            safeName(item.id) ||
+            `img_${++auto}`;
+          const blob = dataURLtoBlob(item.foto);
+          if(blob) images.file(`${base}.${ext}`, blob);
+        }
+      }
+
+      const blobZip = await zip.generateAsync({ type:'blob', compression:'DEFLATE' });
+      const fname = `INVENTARIO_IMPRESORAS_${new Date().toISOString().slice(0,10)}.zip`;
+      saveAs(blobZip, fname);
+      toast('ZIP exportado','success','Incluye CSV, JSON e imágenes.');
+    }
+    $('btnExportZIP').addEventListener('click', exportZIP);
+
+    // ====== Móvil: menú ======
     $('mCSV')?.addEventListener('click', ()=> $('btnExportCSV').click());
     $('mXLSX')?.addEventListener('click', ()=> $('btnExportXLSX').click());
+    $('mZIP')?.addEventListener('click', ()=> $('btnExportZIP').click());
     $('mImport')?.addEventListener('click', ()=> $('fileImport').click());
+    $('mImportZIP')?.addEventListener('click', ()=> $('btnImportZIP').click());
     $('mBackup')?.addEventListener('click', ()=> $('btnBackup').click());
     $('mRestore')?.addEventListener('click', ()=> $('btnRestore').click());
     $('mEtiquetas')?.addEventListener('click', ()=> $('btnEtiquetas').click());
 
-    // Import
+    // ====== Import CSV/XLSX ======
     document.getElementById('btnImport').addEventListener('click', ()=> $('fileImport').click());
     $('fileImport').addEventListener('change', async (e)=>{
       const file = e.target.files[0];
@@ -848,7 +908,7 @@
       setTimeout(()=> el.remove(), 2600);
     }
 
-    // Backup / Restore
+    // ====== Backup / Restore JSON ======
     $('btnBackup').addEventListener('click', ()=>{
       const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8;'});
       download(`IMPRESORAS_BACKUP_${new Date().toISOString().slice(0,10)}.json`, blob);
@@ -880,6 +940,123 @@
         console.error(err);
         toast('JSON inválido','error','No se pudo leer el archivo.');
       } finally {
+        e.target.value = '';
+      }
+    });
+
+    // ====== Import ZIP (data.json/CSV + /imagenes) ======
+    $('btnImportZIP').addEventListener('click', ()=> $('fileImportZIP').click());
+    $('fileImportZIP').addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      try{
+        const zip = await JSZip.loadAsync(file);
+        // 1) Cargar datos: data.json o IMPRESORAS.csv
+        let items = [];
+        if(zip.files['data.json']){
+          const jsonText = await zip.files['data.json'].async('text');
+          const parsed = JSON.parse(jsonText);
+          if(Array.isArray(parsed)) items = parsed;
+        }else if(zip.files['IMPRESORAS.csv']){
+          const csvText = await zip.files['IMPRESORAS.csv'].async('text');
+          const rows = parseCSV(csvText);
+          items = rows.map(r => ({
+            codigo:    String(r['CÓDIGO INVENTARIO'] ?? r['CODIGO INVENTARIO'] ?? r['codigo'] ?? r['Código'] ?? '').trim(),
+            impresora: String(r['IMPRESORA'] ?? r['Impresora'] ?? r['impresora'] ?? '').trim(),
+            marca:     String(r['MARCA'] ?? r['Marca'] ?? r['marca'] ?? '').trim(),
+            modelo:    String(r['MODELO'] ?? r['Modelo'] ?? r['modelo'] ?? '').trim(),
+            serie:     String(r['NÚMERO DE SERIE'] ?? r['NUMERO DE SERIE'] ?? r['SERIE'] ?? r['Serie'] ?? r['serie'] ?? '').trim(),
+            toner:     String(r['TÓNER'] ?? r['TONER'] ?? r['Toner'] ?? r['toner'] ?? '').trim(),
+            color:     String(r['COLOR'] ?? r['Color'] ?? r['color'] ?? '').trim(),
+            area:      String(r['ÁREA'] ?? r['AREA'] ?? r['Area'] ?? r['area'] ?? '').trim(),
+          })).filter(x => x.codigo || x.impresora || x.modelo || x.serie);
+        }else{
+          throw new Error('ZIP sin data.json ni IMPRESORAS.csv');
+        }
+
+        // Normalizar ids y campos
+        items = items.map(x => ({
+          id: x.id || crypto.randomUUID(),
+          codigo: x.codigo || x['codigo_inventario'] || '',
+          impresora: x.impresora || '',
+          marca: x.marca || '',
+          modelo: x.modelo || '',
+          serie: x.serie || '',
+          toner: x.toner || '',
+          color: x.color || '',
+          area: x.area || '',
+          foto: x.foto || ''
+        }));
+
+        // 2) Cargar imágenes de /imagenes
+        // Mapa por base de nombre (sin extensión) -> blob
+        const imgEntries = Object.keys(zip.files).filter(n => /^imagenes\//i.test(n) && !zip.files[n].dir);
+        const imageMap = {};
+        for(const name of imgEntries){
+          const base = name.split('/').pop().replace(/\.[^.]+$/,''); // sin extensión
+          const blob = await zip.files[name].async('blob');
+          imageMap[base.toLowerCase()] = blob;
+        }
+
+        // 3) Asociar imagen por prioridad: codigo > serie > id > impresora
+        async function blobToDataURL(blob){
+          return await new Promise(res=>{
+            const fr = new FileReader();
+            fr.onload = ()=> res(fr.result);
+            fr.readAsDataURL(blob);
+          });
+        }
+
+        for(let i=0;i<items.length;i++){
+          const it = items[i];
+          const keys = [
+            (it.codigo||'').toLowerCase(),
+            (it.serie||'').toLowerCase(),
+            (it.id||'').toLowerCase(),
+            safeName(it.impresora||'').toLowerCase()
+          ].filter(Boolean);
+
+          let found = null;
+          for(const k of keys){
+            if(imageMap[k]){ found = imageMap[k]; break; }
+          }
+          if(found){
+            try{
+              const dataUrl = await blobToDataURL(found);
+              it.foto = dataUrl;
+            }catch(e){}
+          }
+        }
+
+        // 4) Merge con data actual (por codigo → serie → (impresora+marca+modelo))
+        let added = 0, updated = 0;
+        for(const row of items){
+          let idx = -1;
+          if(row.codigo) idx = data.findIndex(x => (x.codigo||'').toLowerCase()===row.codigo.toLowerCase());
+          if(idx < 0 && row.serie) idx = data.findIndex(x => (x.serie||'').toLowerCase()===row.serie.toLowerCase());
+          if(idx < 0){
+            idx = data.findIndex(x =>
+              (x.impresora||'').toLowerCase()===row.impresora.toLowerCase() &&
+              (x.marca||'').toLowerCase()===row.marca.toLowerCase() &&
+              (x.modelo||'').toLowerCase()===row.modelo.toLowerCase()
+            );
+          }
+          if(idx >= 0){
+            const before = JSON.stringify(data[idx]);
+            data[idx] = { ...data[idx], ...row };
+            if (JSON.stringify(data[idx]) !== before) updated++;
+          }else{
+            data.push(row);
+            added++;
+          }
+        }
+
+        save(data); render();
+        toast('ZIP importado','success',`Agregados ${added}, actualizados ${updated}.`);
+      }catch(err){
+        console.error(err);
+        toast('Error al importar ZIP','error', err.message || 'Revisa el archivo.');
+      }finally{
         e.target.value = '';
       }
     });
