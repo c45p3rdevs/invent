@@ -10,8 +10,10 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
   <!-- SheetJS (XLSX) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- QRCode (opcional para etiquetas) -->
+  <!-- QRCode (para etiquetas) -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.5/build/qrcode.min.js"></script>
+  <!-- Partículas (tsparticles) -->
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@3/tsparticles.bundle.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -42,12 +44,9 @@
       #app { display:none !important; }
       #printArea { display:block !important; }
     }
-    /* Etiquetas A4 (grid 3 x auto) – ajusta medidas si usas papel de etiqueta específico */
+    /* Etiquetas A4 (grid 3 x auto) */
     #printArea { display:none; padding: 10mm; }
-    .labels-grid {
-      display:grid; gap:6mm;
-      grid-template-columns: repeat(3, 1fr);
-    }
+    .labels-grid { display:grid; gap:6mm; grid-template-columns: repeat(3, 1fr); }
     .label {
       border:1px dashed #cbd5e1; border-radius:8px; padding:6mm;
       display:flex; gap:6mm; align-items:center; min-height:38mm;
@@ -57,11 +56,19 @@
     .label .meta { font-size:11px; line-height:1.2; }
     .label .meta .title{ font-weight:700; font-size:12px; }
     .label .meta .muted{ opacity:.7; }
+
+    /* Fondo partículas tenue */
+    #particles { position:fixed; inset:0; z-index:0; opacity:.15; pointer-events:none; }
+    /* Asegura que el contenido quede arriba del fondo */
+    #app { position: relative; z-index: 1; }
   </style>
 </head>
 
 <body class="bg-base-200 min-h-dvh">
-  <!-- ====== APP (pantalla) ====== -->
+  <!-- Fondo partículas -->
+  <div id="particles"></div>
+
+  <!-- ====== APP ====== -->
   <div id="app">
     <!-- Navbar institucional -->
     <header class="navbar bg-base-100 shadow-sm sticky top-0 z-30">
@@ -69,20 +76,26 @@
         <img src="img/logob.png" alt="Logos institucionales" class="h-10 sm:h-12 object-contain" />
         <div class="flex flex-col leading-tight">
           <span class="font-bold text-lg sm:text-xl">Inventario · Impresoras</span>
-          <span class="text-xs opacity-60">IMPRESORA · MODELO · NÚMERO DE SERIE · TONER · COLOR · ÁREA</span>
+          <span class="text-xs opacity-60">IMPRESORA · MARCA · MODELO · SERIE · TONER · COLOR · ÁREA · FOTO</span>
         </div>
       </div>
-      <div class="flex-none">
-        <label class="swap swap-rotate mr-2">
+      <div class="flex-none items-center gap-2 pr-2">
+        <label class="swap swap-rotate mr-1">
           <input type="checkbox" class="theme-controller" value="dracula" />
           <svg class="swap-off size-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 0 9.9 6.32A9 9 0 1 1 5 12z"/></svg>
           <svg class="swap-on size-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/></svg>
         </label>
-        <button id="btnExportCSV" class="btn btn-sm">Exportar CSV</button>
-        <button id="btnExportXLSX" class="btn btn-sm ml-2">Exportar XLSX</button>
+
+        <button id="btnExportCSV"  class="btn btn-xs sm:btn-sm">CSV</button>
+        <button id="btnExportXLSX" class="btn btn-xs sm:btn-sm">XLSX</button>
         <input id="fileImport" type="file" accept=".csv,.xlsx" class="hidden">
-        <button id="btnImport" class="btn btn-sm ml-2">Importar</button>
-        <button id="btnEtiquetas" class="btn btn-sm ml-2 btn-primary">Imprimir etiquetas</button>
+        <button id="btnImport" class="btn btn-xs sm:btn-sm">Importar</button>
+
+        <button id="btnBackup"  class="btn btn-xs sm:btn-sm">Respaldar JSON</button>
+        <input id="fileRestore" type="file" accept=".json" class="hidden">
+        <button id="btnRestore" class="btn btn-xs sm:btn-sm">Restaurar JSON</button>
+
+        <button id="btnEtiquetas" class="btn btn-xs sm:btn-sm btn-primary">Etiquetas</button>
       </div>
     </header>
 
@@ -92,7 +105,7 @@
         <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
           <label class="input input-bordered flex items-center gap-2 md:col-span-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="size-5 opacity-60" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2a8 8 0 1 1-5.293 13.707l-2.853 2.853a1 1 0 0 1-1.414-1.414l2.853-2.853A8 8 0 0 1 10 2zm0 2a6 6 0 1 0 .001 12.001A6 6 0 0 0 10 4z"/></svg>
-            <input id="q" type="text" placeholder="Buscar: impresora, modelo, serie, toner, área..." class="grow" />
+            <input id="q" type="text" placeholder="Buscar: impresora, marca, modelo, serie, toner, área..." class="grow" />
           </label>
           <select id="fColor" class="select select-bordered">
             <option value="">Color: Todos</option>
@@ -111,9 +124,11 @@
           <table class="table">
             <thead>
               <tr>
+                <th></th>
                 <th>IMPRESORA</th>
+                <th>MARCA</th>
                 <th>MODELO</th>
-                <th>NÚMERO DE SERIE</th>
+                <th>SERIE</th>
                 <th>TONER</th>
                 <th>COLOR</th>
                 <th>ÁREA</th>
@@ -145,6 +160,10 @@
             <input id="impresora" class="input input-bordered" placeholder="Alias / Nombre" required>
           </label>
           <label class="form-control">
+            <span class="label-text">MARCA</span>
+            <input id="marca" class="input input-bordered" placeholder="HP / Brother / Epson ...">
+          </label>
+          <label class="form-control">
             <span class="label-text">MODELO*</span>
             <input id="modelo" class="input input-bordered" placeholder="LaserJet Pro M404" required>
           </label>
@@ -168,10 +187,64 @@
             <span class="label-text">ÁREA</span>
             <input id="area" class="input input-bordered" placeholder="Recepción / Sistemas / Dirección">
           </label>
+
+          <!-- FOTO: subir o tomar -->
+          <div class="md:col-span-2">
+            <div role="tablist" class="tabs tabs-boxed">
+              <button id="tabUpload" class="tab tab-active" type="button" onclick="showPhotoTab('upload')">Subir foto</button>
+              <button id="tabCamera" class="tab" type="button" onclick="showPhotoTab('camera')">Tomar con cámara</button>
+            </div>
+            <!-- Subir -->
+            <div id="paneUpload" class="mt-2">
+              <input id="fotoFile" type="file" accept="image/*" class="file-input file-input-bordered w-full" />
+              <p class="text-xs opacity-70 mt-1">Formatos: JPG/PNG. Se guarda comprimida en el navegador.</p>
+            </div>
+            <!-- Cámara -->
+            <div id="paneCamera" class="mt-2 hidden">
+              <div class="flex items-center gap-2">
+                <video id="camPreview" class="rounded-box w-48 bg-black" autoplay playsinline></video>
+                <canvas id="camCanvas" class="rounded-box w-48 hidden"></canvas>
+              </div>
+              <div class="mt-2 flex gap-2">
+                <button id="btnStartCam" class="btn btn-sm" type="button" onclick="startCamera()">Iniciar cámara</button>
+                <button id="btnShot" class="btn btn-sm btn-primary" type="button" onclick="takeShot()" disabled>Tomar foto</button>
+                <button id="btnRetake" class="btn btn-sm hidden" type="button" onclick="retake()">Repetir</button>
+                <button id="btnStopCam" class="btn btn-sm btn-ghost" type="button" onclick="stopCamera()">Detener</button>
+              </div>
+            </div>
+            <!-- Preview -->
+            <div class="mt-3">
+              <span class="label-text">Vista previa</span>
+              <div class="mt-1 flex items-center gap-3">
+                <img id="fotoPreview" class="rounded-xl w-28 h-28 object-cover border border-base-300 bg-base-100" alt="preview" />
+                <button class="btn btn-xs btn-ghost" type="button" onclick="clearPhoto()">Quitar foto</button>
+              </div>
+            </div>
+          </div>
         </div>
+
         <div class="modal-action">
-          <button class="btn btn-ghost" onclick="modalForm.close()">Cancelar</button>
-          <button id="btnSave" class="btn btn-primary" onclick="savePrinter()">Guardar</button>
+          <button class="btn btn-ghost" onclick="modalForm.close()" type="button">Cancelar</button>
+          <button id="btnSave" class="btn btn-primary" type="button" onclick="savePrinter()">Guardar</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Modal Ver -->
+    <dialog id="modalView" class="modal">
+      <div class="modal-box max-w-lg">
+        <form method="dialog"><button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button></form>
+        <div class="flex items-start gap-4">
+          <img id="v_foto" class="w-32 h-32 object-cover rounded-xl border border-base-300 bg-base-100" alt="foto">
+          <div class="grow">
+            <h3 id="v_impresora" class="font-bold text-lg"></h3>
+            <p class="text-sm opacity-70">Marca: <span id="v_marca"></span></p>
+            <p class="text-sm opacity-70">Modelo: <span id="v_modelo"></span></p>
+            <p class="text-sm">Serie: <b id="v_serie"></b></p>
+            <p class="text-sm opacity-70">Tóner: <span id="v_toner"></span></p>
+            <p class="text-sm opacity-70">Área: <span id="v_area"></span></p>
+            <p class="text-sm opacity-70">Color: <span id="v_color"></span></p>
+          </div>
         </div>
       </div>
     </dialog>
@@ -189,13 +262,15 @@
     // ====== Config ======
     const KEY = 'inv_impresoras_excel';
     let editingId = null;
+    let camStream = null;
 
     const $ = id => document.getElementById(id);
     const modalForm = $('modalForm');
+    const modalView = $('modalView');
     const tbody = $('tbodyPrinters');
     const emptyState = $('emptyState');
 
-    const inputs = ['impresora','modelo','serie','toner','color','area'];
+    const inputs = ['impresora','marca','modelo','serie','toner','color','area'];
 
     // ====== Storage ======
     function load(){
@@ -218,7 +293,7 @@
       const fArea = $('fArea').value;
 
       const filtered = data.filter(p=>{
-        const text = [p.impresora,p.modelo,p.serie,p.toner,p.color,p.area].join(' ').toLowerCase();
+        const text = [p.impresora,p.marca,p.modelo,p.serie,p.toner,p.color,p.area].join(' ').toLowerCase();
         const passQ = !q || text.includes(q);
         const passC = !fColor || (p.color||'') === fColor;
         const passA = !fArea || (p.area||'') === fArea;
@@ -234,26 +309,29 @@
       tbody.innerHTML = filtered.map(p=>rowHTML(p)).join('');
       emptyState.classList.toggle('hidden', filtered.length !== 0);
 
-      // Guarda el último conjunto filtrado para etiquetas
       window.__filteredForLabels = filtered;
     }
 
     function rowHTML(p){
+      const thumb = p.foto ? `<img src="${p.foto}" alt="foto" class="w-10 h-10 rounded-lg object-cover border border-base-300 bg-base-100" />` : `<div class="w-10 h-10 rounded-lg bg-base-300"></div>`;
       return `
       <tr class="align-top">
+        <td data-label="Foto" class="py-2">${thumb}</td>
         <td data-label="IMPRESORA">
           <div class="flex flex-col">
             <span class="font-semibold">${escapeHTML(p.impresora||'')}</span>
             <span class="text-xs opacity-60">${escapeHTML(p.area||'—')}</span>
           </div>
         </td>
+        <td data-label="MARCA">${escapeHTML(p.marca||'')}</td>
         <td data-label="MODELO">${escapeHTML(p.modelo||'')}</td>
-        <td data-label="NÚMERO DE SERIE">${escapeHTML(p.serie||'')}</td>
+        <td data-label="SERIE">${escapeHTML(p.serie||'')}</td>
         <td data-label="TONER">${escapeHTML(p.toner||'')}</td>
         <td data-label="COLOR">${badgeColor(p.color)}</td>
         <td data-label="ÁREA">${escapeHTML(p.area||'')}</td>
         <td data-label="Acciones">
-          <div class="flex gap-1 justify-end">
+          <div class="flex flex-wrap gap-1 justify-end">
+            <button class="btn btn-xs" onclick='view("${p.id}")'>Ver</button>
             <button class="btn btn-xs" onclick='edit("${p.id}")'>Editar</button>
             <button class="btn btn-xs btn-error" onclick='del("${p.id}")'>Borrar</button>
           </div>
@@ -261,12 +339,40 @@
       </tr>`;
     }
 
+    // ====== Etiquetas (impresión) ======
+    $('btnEtiquetas').addEventListener('click', ()=>{
+      const list = window.__filteredForLabels || data;
+      const grid = $('labelsGrid');
+      grid.innerHTML = '';
+      for(const item of list){
+        const card = document.createElement('div');
+        card.className = 'label';
+        card.innerHTML = `
+          <img src="img/logob.png" class="logo" alt="logo">
+          <div class="meta">
+            <div class="title">${escapeHTML(item.impresora || '—')}</div>
+            <div class="muted">Marca: ${escapeHTML(item.marca || '—')}</div>
+            <div class="muted">Modelo: ${escapeHTML(item.modelo || '—')}</div>
+            <div>Núm. Serie: <b>${escapeHTML(item.serie || '—')}</b></div>
+            <div class="muted">Área: ${escapeHTML(item.area || '—')}</div>
+            <div class="muted">Tóner: ${escapeHTML(item.toner || '—')}</div>
+          </div>
+          <canvas class="qr"></canvas>
+        `;
+        grid.appendChild(card);
+        const value = item.serie?.trim() ? item.serie.trim() : `${item.impresora||''} | ${item.marca||''} ${item.modelo||''}`;
+        const canvas = card.querySelector('canvas.qr');
+        try { QRCode.toCanvas(canvas, value, { margin: 0, width: 140 }); } catch(e){}
+      }
+      window.print();
+    });
+
+    // ====== Helpers UI ======
     function badgeColor(color){
       const map = { 'Color': 'badge-success', 'Monocromática': 'badge-neutral' };
       const c = (color||'').trim();
       return `<span class="badge ${map[c]||'badge-ghost'}">${escapeHTML(c||'—')}</span>`;
     }
-
     function escapeHTML(s){
       return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
@@ -276,6 +382,9 @@
       editingId = null;
       $('formTitle').textContent = 'Nueva impresora';
       for(const id of inputs){ $(id).value = ''; }
+      clearPhoto();
+      stopCamera();
+      showPhotoTab('upload');
       modalForm.showModal();
     }
 
@@ -285,7 +394,24 @@
       editingId = id;
       $('formTitle').textContent = 'Editar impresora';
       for(const k of inputs){ $(k).value = item[k] ?? ''; }
+      setPreview(item.foto || '');
+      stopCamera();
+      showPhotoTab('upload');
       modalForm.showModal();
+    }
+
+    function view(id){
+      const p = data.find(x=>x.id===id);
+      if(!p) return;
+      $('v_impresora').textContent = p.impresora || '—';
+      $('v_marca').textContent     = p.marca || '—';
+      $('v_modelo').textContent    = p.modelo || '—';
+      $('v_serie').textContent     = p.serie || '—';
+      $('v_toner').textContent     = p.toner || '—';
+      $('v_area').textContent      = p.area  || '—';
+      $('v_color').textContent     = p.color || '—';
+      $('v_foto').src              = p.foto || '';
+      modalView.showModal();
     }
 
     function del(id){
@@ -304,6 +430,7 @@
         const el = $(k);
         obj[k] = el.value.trim();
       }
+      obj.foto = $('fotoPreview').src || '';
       if(!obj.impresora || !obj.modelo){ toast('Completa IMPRESORA y MODELO','warning'); return null; }
       return obj;
     }
@@ -321,10 +448,10 @@
       save(data); render(); modalForm.close();
     }
 
-    // ====== CSV / XLSX ======
+    // ====== CSV / XLSX (sin foto para mantener tamaño) ======
     function toCSV(list){
-      const headers = ['IMPRESORA','MODELO','NÚMERO DE SERIE','TONER','COLOR','ÁREA'];
-      const keys    = ['impresora','modelo','serie','toner','color','area'];
+      const headers = ['IMPRESORA','MARCA','MODELO','NÚMERO DE SERIE','TONER','COLOR','ÁREA'];
+      const keys    = ['impresora','marca','modelo','serie','toner','color','area'];
       const lines = [headers.join(',')].concat(list.map(o => keys.map(k => csvEscape(o[k] ?? '')).join(',')));
       return lines.join('\n');
     }
@@ -344,9 +471,10 @@
     });
 
     $('btnExportXLSX').addEventListener('click', ()=>{
-      const headers = ['IMPRESORA','MODELO','NÚMERO DE SERIE','TONER','COLOR','ÁREA'];
+      const headers = ['IMPRESORA','MARCA','MODELO','NÚMERO DE SERIE','TONER','COLOR','ÁREA'];
       const rows = data.map(o => ({
         'IMPRESORA': o.impresora ?? '',
+        'MARCA': o.marca ?? '',
         'MODELO': o.modelo ?? '',
         'NÚMERO DE SERIE': o.serie ?? '',
         'TONER': o.toner ?? '',
@@ -361,6 +489,7 @@
       toast('XLSX exportado','success');
     });
 
+    // ====== Import CSV/XLSX ======
     $('btnImport').addEventListener('click', ()=> $('fileImport').click());
     $('fileImport').addEventListener('change', async (e)=>{
       const file = e.target.files[0];
@@ -385,12 +514,13 @@
     function importRows(rows){
       const norm = rows.map(r => ({
         impresora: String(r['IMPRESORA'] ?? r['Impresora'] ?? r['impresora'] ?? '').trim(),
+        marca:     String(r['MARCA'] ?? r['Marca'] ?? r['marca'] ?? '').trim(),
         modelo:    String(r['MODELO'] ?? r['Modelo'] ?? r['modelo'] ?? '').trim(),
         serie:     String(r['NÚMERO DE SERIE'] ?? r['NUMERO DE SERIE'] ?? r['SERIE'] ?? r['Serie'] ?? r['serie'] ?? '').trim(),
         toner:     String(r['TONER'] ?? r['Toner'] ?? r['toner'] ?? '').trim(),
         color:     String(r['COLOR'] ?? r['Color'] ?? r['color'] ?? '').trim(),
         area:      String(r['ÁREA'] ?? r['AREA'] ?? r['Area'] ?? r['area'] ?? '').trim(),
-      })).filter(x => x.impresora || x.modelo || x.serie);
+      })).filter(x => x.impresora || x.marca || x.modelo || x.serie);
 
       let added = 0;
       for(const row of norm){
@@ -399,11 +529,12 @@
         if(idx < 0){
           idx = data.findIndex(x =>
             (x.impresora||'').toLowerCase()===row.impresora.toLowerCase() &&
+            (x.marca||'').toLowerCase()===row.marca.toLowerCase() &&
             (x.modelo||'').toLowerCase()===row.modelo.toLowerCase()
           );
         }
         if(idx >= 0){
-          for(const k of ['impresora','modelo','serie','toner','color','area']){
+          for(const k of ['impresora','marca','modelo','serie','toner','color','area']){
             if(!data[idx][k] && row[k]) data[idx][k] = row[k];
           }
         }else{
@@ -443,38 +574,129 @@
       return res;
     }
 
-    // ====== Etiquetas (impresión) ======
-    $('btnEtiquetas').addEventListener('click', ()=>{
-      // Usa el conjunto actualmente filtrado (render lo actualiza)
-      const list = window.__filteredForLabels || data;
-      const grid = $('labelsGrid');
-      grid.innerHTML = '';
-      for(const item of list){
-        const card = document.createElement('div');
-        card.className = 'label';
-        card.innerHTML = `
-          <img src="img/logob.png" class="logo" alt="logo">
-          <div class="meta">
-            <div class="title">${escapeHTML(item.impresora || '—')}</div>
-            <div class="muted">Modelo: ${escapeHTML(item.modelo || '—')}</div>
-            <div>Núm. Serie: <b>${escapeHTML(item.serie || '—')}</b></div>
-            <div class="muted">Área: ${escapeHTML(item.area || '—')}</div>
-            <div class="muted">Tóner: ${escapeHTML(item.toner || '—')}</div>
-          </div>
-          <canvas class="qr"></canvas>
-        `;
-        grid.appendChild(card);
+    // ====== Foto: subir / cámara ======
+    const fotoFile     = $('fotoFile');
+    const fotoPreview  = $('fotoPreview');
+    const camPreview   = $('camPreview');
+    const camCanvas    = $('camCanvas');
+    const btnShot      = $('btnShot');
+    const btnRetake    = $('btnRetake');
 
-        // Genera QR con el número de serie (si existe), si no, con impresora+modelo
-        const value = item.serie?.trim() ? item.serie.trim() : `${item.impresora||''} | ${item.modelo||''}`;
-        const canvas = card.querySelector('canvas.qr');
-        try { QRCode.toCanvas(canvas, value, { margin: 0, width: 140 }); } catch(e){}
-      }
-      // Lanza impresión (usa @media print)
-      window.print();
+    fotoFile?.addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const url = await fileToDataURL(file, 900, 900); // comprime
+      setPreview(url);
     });
 
-    // ====== Eventos UI ======
+    function setPreview(url){ fotoPreview.src = url || ''; }
+    function clearPhoto(){ setPreview(''); if (fotoFile) fotoFile.value=''; }
+
+    function showPhotoTab(which){
+      const up = $('paneUpload'), cam = $('paneCamera');
+      const tU = $('tabUpload'), tC = $('tabCamera');
+      if(which==='upload'){ up.classList.remove('hidden'); cam.classList.add('hidden'); tU.classList.add('tab-active'); tC.classList.remove('tab-active'); }
+      else { up.classList.add('hidden'); cam.classList.remove('hidden'); tC.classList.add('tab-active'); tU.classList.remove('tab-active'); }
+    }
+
+    async function startCamera(){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        camStream = stream;
+        camPreview.srcObject = stream;
+        camPreview.classList.remove('hidden'); camCanvas.classList.add('hidden');
+        btnShot.disabled = false; btnRetake.classList.add('hidden');
+      }catch(e){
+        toast('No se pudo acceder a la cámara','error');
+      }
+    }
+    function stopCamera(){
+      if(camStream){ camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+      btnShot.disabled = true; btnRetake.classList.add('hidden');
+    }
+    function takeShot(){
+      if(!camStream) return;
+      const track = camStream.getVideoTracks()[0];
+      const settings = track.getSettings();
+      const w = settings.width || camPreview.videoWidth || 640;
+      const h = settings.height|| camPreview.videoHeight|| 480;
+      camCanvas.width = w; camCanvas.height = h;
+      const ctx = camCanvas.getContext('2d');
+      ctx.drawImage(camPreview, 0, 0, w, h);
+      const url = camCanvas.toDataURL('image/jpeg', 0.85);
+      setPreview(url);
+      camPreview.classList.add('hidden'); camCanvas.classList.remove('hidden');
+      btnRetake.classList.remove('hidden');
+    }
+    function retake(){
+      camPreview.classList.remove('hidden'); camCanvas.classList.add('hidden');
+      setPreview(null);
+    }
+
+    function fileToDataURL(file, maxW=900, maxH=900){
+      return new Promise((resolve)=>{
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const { url } = resizeImage(img, maxW, maxH);
+            resolve(url);
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    function resizeImage(img, maxW, maxH){
+      let w = img.width, h = img.height;
+      const ratio = Math.min(maxW / w, maxH / h, 1);
+      const nw = Math.round(w * ratio), nh = Math.round(h * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = nw; canvas.height = nh;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, nw, nh);
+      const url = canvas.toDataURL('image/jpeg', 0.85);
+      return { url };
+    }
+
+    // ====== Respaldo total JSON (incluye fotos) ======
+    $('btnBackup').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json;charset=utf-8;'});
+      download(`IMPRESORAS_BACKUP_${new Date().toISOString().slice(0,10)}.json`, blob);
+      toast('Respaldo JSON generado','success');
+    });
+
+    $('btnRestore').addEventListener('click', ()=> $('fileRestore').click());
+    $('fileRestore').addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      try{
+        const text = await file.text();
+        const arr = JSON.parse(text);
+        if(!Array.isArray(arr)) throw new Error('Formato inválido');
+        // Normaliza por si faltan campos
+        data = arr.map(x => ({
+          id: x.id || crypto.randomUUID(),
+          impresora: x.impresora || '',
+          marca: x.marca || '',
+          modelo: x.modelo || '',
+          serie: x.serie || '',
+          toner: x.toner || '',
+          color: x.color || '',
+          area: x.area || '',
+          foto: x.foto || ''
+        }));
+        save(data); render();
+        toast('Restaurado desde JSON','success');
+      }catch(err){
+        console.error(err);
+        toast('JSON inválido','error');
+      } finally {
+        e.target.value = '';
+      }
+    });
+
+    // ====== Búsqueda/Filtros ======
     $('q').addEventListener('input', render);
     $('fColor').addEventListener('change', render);
     $('fArea').addEventListener('change', render);
@@ -488,6 +710,32 @@
       document.getElementById('toasts').appendChild(el);
       setTimeout(()=> el.remove(), 2500);
     }
+
+    // ====== Partículas tenues (corregido) ======
+    window.addEventListener('DOMContentLoaded', async () => {
+      try{
+        if (window.tsParticles && document.getElementById('particles')) {
+          await window.tsParticles.load({
+            id: "particles",
+            options: {
+              background: { color: "transparent" },
+              fpsLimit: 30,
+              particles: {
+                number: { value: 40, density: { enable: true, area: 800 } },
+                color: { value: "#5b6ea8" },
+                opacity: { value: 0.2 },
+                size: { value: { min: 1, max: 3 } },
+                move: { enable: true, speed: 0.6, direction: "none", outModes: { default: "out" } },
+                links: { enable: true, distance: 120, opacity: 0.15, width: 1, color: "#5b6ea8" }
+              },
+              detectRetina: true
+            }
+          });
+        }
+      }catch(e){
+        console.warn('Particles no cargaron:', e);
+      }
+    });
 
     // Init
     render();
